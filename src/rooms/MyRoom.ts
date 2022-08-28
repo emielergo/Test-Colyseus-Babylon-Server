@@ -22,7 +22,7 @@ export class MyRoom extends Room<RaiderRoomState> {
         this.onMessage("insertAxie", (client, data) => {
 
             const player = this.state.players.get(client.sessionId);
-            const axie = new Axie(data["id"], data["skin"], data["x"], data["y"], data["z"]);
+            const axie = new Axie(data["id"], data["hp"], data["range"], data["damage"], data["skin"], data["x"], data["y"], data["z"]);
 
             player.axies.set(axie.id, axie);
 
@@ -41,6 +41,11 @@ export class MyRoom extends Room<RaiderRoomState> {
             player.bunker.hp = data["hp"];
         });
     }
+
+    //TODO:
+    // onAuth(){
+
+    // }
 
     onJoin(client: Client, options: any) {
         console.log(client.sessionId, "joined!");

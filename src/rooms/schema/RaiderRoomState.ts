@@ -5,15 +5,19 @@ export class Axie extends Schema {
   @type("string") skin: string;
   @type("number") hp: number;
   @type("number") range: number;
+  @type("number") damage: number;
   @type("number") x: number;
   @type("number") y: number;
   @type("number") z: number;
   // @type("Mesh") mesh: Mesh;
   // @type("Target") target: Target;
 
-  constructor(id: string, skin: string, x: number, y: number, z: number) {
+  constructor(id: string, hp: number, range: number, damage: number, skin: string, x: number, y: number, z: number) {
     super();
     this.id = id;
+    this.hp = hp;
+    this.range = range;
+    this.damage = damage;
     this.skin = skin;
     this.x = x;
     this.y = y;
@@ -23,9 +27,10 @@ export class Axie extends Schema {
 
 export class Bunker extends Schema {
   @type("string") id: string;
-  // @type("string") skin: string;
+  @type("string") skin: string;
   @type("number") hp: number;
   @type("number") range: number;
+  @type("number") damage: number;
   @type("number") x: number;
   @type("number") y: number;
   @type("number") z: number;
