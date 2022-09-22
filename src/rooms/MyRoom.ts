@@ -8,6 +8,7 @@ export class MyRoom extends Room<RaiderRoomState> {
     onCreate(options: any) {
         console.log("MyRoom created.");
         this.setState(new RaiderRoomState());
+        this.clock.start();
 
         this.onMessage("updateAxie", (client, data) => {
             const player = this.state.players.get(client.sessionId);
@@ -22,7 +23,7 @@ export class MyRoom extends Room<RaiderRoomState> {
         this.onMessage("insertAxie", (client, data) => {
 
             const player = this.state.players.get(client.sessionId);
-            const axie = new Axie(data["id"], data["hp"], data["range"], data["damage"], data["skin"], data["x"], data["y"], data["z"]);
+            const axie = new Axie(data["id"], data["hp"], data["range"], data["damage"], data["level"], data["skin"], data["x"], data["y"], data["z"]);
 
             player.axies.set(axie.id, axie);
 
@@ -40,6 +41,16 @@ export class MyRoom extends Room<RaiderRoomState> {
             const player = this.state.players.get(client.sessionId);
             player.bunker.hp = data["hp"];
         });
+
+        this.onMessage("updateEnergy", (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            player.energy = player.energy - data["energy_cost"];
+        });
+
+        this.onMessage("updateCrystals", (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            player.crystals = data["crystals"];
+        });
     }
 
     //TODO:
@@ -49,9 +60,9 @@ export class MyRoom extends Room<RaiderRoomState> {
 
     onJoin(client: Client, options: any) {
         console.log(client.sessionId, "joined!");
-
         // create Player instance
-        const player = new Player(MyRoom.counter % 2 + 1);
+        const player = new Player(MyRoom.counter % 2 + 1, 20, 10);
+        this.clock.setInterval(() => { player.energy++ }, 1000);
         MyRoom.counter++;
         player.bunker = new Bunker('bunker ' + player.number, 200, 15);
 
