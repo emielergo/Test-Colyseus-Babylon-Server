@@ -1,7 +1,9 @@
 import Arena from "@colyseus/arena";
 import { monitor } from "@colyseus/monitor";
+import cors from "cors";
 
 import { MyRoom } from "./rooms/MyRoom";
+
 
 export default Arena({
     getId: () => "BabylonJS and Colyseus Demo Server",
@@ -14,7 +16,7 @@ export default Arena({
         app.get("/", (req, res) => {
             res.send("Server ready!");
         });
-
+        app.use(cors({ origin: '*', credentials: false }));
         app.use("/colyseus", monitor());
     },
 
