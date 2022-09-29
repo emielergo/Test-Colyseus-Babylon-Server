@@ -8,6 +8,8 @@ export class MyRoom extends Room<RaiderRoomState> {
     onCreate(options: any) {
         console.log("MyRoom created.");
         this.setState(new RaiderRoomState());
+        this.setSimulationInterval((deltaTime) => this.update(deltaTime));
+
         this.clock.start();
 
         this.onMessage("updateAxie", (client, data) => {
@@ -20,10 +22,18 @@ export class MyRoom extends Room<RaiderRoomState> {
             }
         });
 
+        this.onMessage("updateAxieHp", (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            let axie = player.axies.get(data["id"]);
+            if (axie) {
+                axie.hp = data["hp"];
+            }
+        });
+
         this.onMessage("insertAxie", (client, data) => {
 
             const player = this.state.players.get(client.sessionId);
-            const axie = new Axie(data["id"], data["hp"], data["range"], data["damage"], data["level"], data["skin"], data["x"], data["y"], data["z"]);
+            const axie = new Axie(data["id"], data["hp"], data["shield"], data["range"], data["damage"], data["level"], data["skin"], data["x"], data["y"], data["z"]);
 
             player.axies.set(axie.id, axie);
 
@@ -38,7 +48,7 @@ export class MyRoom extends Room<RaiderRoomState> {
         });
 
         this.onMessage("updateBunker", (client, data) => {
-            const player = this.state.players.get(client.sessionId);
+            const player = this.state.players.get(data["enemy_id"]);
             player.bunker.hp = data["hp"];
         });
 
@@ -53,6 +63,12 @@ export class MyRoom extends Room<RaiderRoomState> {
         });
     }
 
+    //TODO: hier moet de renderloop in komen!
+    update(deltaTime) {
+        // implement your physics or world updates here!
+        // this is a good place to update the room state
+    }
+
     //TODO:
     // onAuth(){
 
@@ -62,7 +78,11 @@ export class MyRoom extends Room<RaiderRoomState> {
         console.log(client.sessionId, "joined!");
         // create Player instance
         const player = new Player(MyRoom.counter % 2 + 1, 20, 10);
-        this.clock.setInterval(() => { player.energy++ }, 1000);
+        this.clock.setInterval(() => {
+            if (this.clients.length == 2) {
+                player.energy++
+            }
+        }, 1000);
         MyRoom.counter++;
         player.bunker = new Bunker('bunker ' + player.number, 200, 15);
 

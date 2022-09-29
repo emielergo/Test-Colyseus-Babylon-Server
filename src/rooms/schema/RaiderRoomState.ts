@@ -4,6 +4,9 @@ export class Axie extends Schema {
   @type("string") id: string;
   @type("string") skin: string;
   @type("number") hp: number;
+  @type("number") maxHp: number;
+  @type("number") shield: number;
+  @type("number") maxShield: number;
   @type("number") range: number;
   @type("number") damage: number;
   @type("number") level: number;
@@ -13,10 +16,13 @@ export class Axie extends Schema {
   // @type("Mesh") mesh: Mesh;
   // @type("Target") target: Target;
 
-  constructor(id: string, hp: number, range: number, damage: number, level: number, skin: string, x: number, y: number, z: number) {
+  constructor(id: string, hp: number, shield: number, range: number, damage: number, level: number, skin: string, x: number, y: number, z: number) {
     super();
     this.id = id;
     this.hp = hp;
+    this.maxHp = hp;
+    this.shield = shield;
+    this.maxShield = shield;
     this.range = range;
     this.damage = damage;
     this.level = level;
@@ -49,13 +55,14 @@ export class Player extends Schema {
   @type("number") energy: number;
   @type("number") crystals: number;
   @type({ map: Axie }) axies = new MapSchema<Axie>();
-  @type(Bunker) bunker: Bunker;
+  @type(Bunker) bunker: Bunker ;
 
   constructor(counter: number, energy: number, crystals: number) {
     super();
     this.number = counter;
     this.energy = energy;
     this.crystals = crystals;
+    this.bunker = new Bunker('bunkerId' + this.number, 200, 5)
   }
 }
 
