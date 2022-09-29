@@ -64,7 +64,7 @@ export class MyRoom extends Room<RaiderRoomState> {
     }
 
     //TODO: hier moet de renderloop in komen!
-    update(deltaTime) {
+    update(_deltaTime: number) {
         // implement your physics or world updates here!
         // this is a good place to update the room state
     }
