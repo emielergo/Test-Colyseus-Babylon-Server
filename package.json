@@ -3,6 +3,9 @@
   "name": "axie-raids-server",
   "version": "0.0.1",
   "description": "npm init template for bootstrapping an empty Colyseus project",
+  "engines": {
+    "node": "12.11.1"
+    },
   "main": "lib/index.js",
   "scripts": {
     "start": "ts-node-dev --respawn --transpile-only src/index.ts",
