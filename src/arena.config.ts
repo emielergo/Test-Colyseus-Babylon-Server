@@ -16,7 +16,7 @@ export default Arena({
         app.get("/", (req, res) => {
             res.send("Server ready!");
         });
-        app.use(cors({ origin: 'http://localhost:8080/', credentials: false }));
+        app.use(cors({ origin: 'http://localhost:8080', credentials: false }));
         app.use("/colyseus", monitor());
     },
 
