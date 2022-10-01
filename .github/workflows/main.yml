@@ -56,7 +56,7 @@ jobs:
           # your sftp server port, default to 22
           port: 22
           # will put all file under this path
-          local_path: './lib/*'
+          local_path: './*'
           # files will copy to under remote_path
           remote_path: '/var/www/html/server.axie-raids.com'
           # connection via sftp protocol only
