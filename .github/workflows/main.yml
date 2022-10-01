@@ -44,12 +44,24 @@ jobs:
         run: |
           npm install
           npm run build
-      - name: Simple SFTP
-
-        uses: Atyn/simple-sftp-action@0.0.2
+      - name: SFTP Deploy
+        # You may pin to the exact commit or the version.
+        # uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
-          # URL to the SFTP server. Example: sftp://USERNAME:PASSWORD@example.com/remote-directory
-          url: sftp://root:HT7qt4hiDSgfAE@104.248.250.169/var/home/www/server
-          # The directory that should be uploaded
-          localdir: dist
-      
+          # username
+          username: root
+          # your sftp server
+          server: 104.248.250.169
+          # your sftp server port, default to 22
+          port: 22
+          # will put all file under this path
+          local_path: './lib/*'
+          # files will copy to under remote_path
+          remote_path: '/var/www/html/server.axie-raids.com'
+          # connection via sftp protocol only
+          sftp_only: true
+          # This operation will delete all files in the remote path before upload. Please be careful set this to true
+          delete_remote_files: false
+          # SSH passsword，If a password is set, the secret key pair is ignored
+          password: HT7qt4hiDSgfAE
