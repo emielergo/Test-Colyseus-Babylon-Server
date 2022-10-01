@@ -44,6 +44,7 @@ jobs:
         run: |
           npm install
           npm run build
+          npm --prefix '/lib/' install
       - name: SFTP Deploy
         # You may pin to the exact commit or the version.
         # uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
@@ -66,21 +67,21 @@ jobs:
           # SSH passsword，If a password is set, the secret key pair is ignored
           password: HT7qt4hiDSgfAE
           
-      - name: Remote SSH Commands
-        # You may pin to the exact commit or the version.
-        # uses: fifsky/ssh-action@58b3c484be9c20cf118fd3b939a6d2cb3c769512
-        uses: fifsky/ssh-action@v0.0.6
-        with:
-          # Command to execute on the remote server.
-          command: npm --prefix '/var/www/html/server.axie-raids.com/' install 
-          # Hostname or IP address of the server.
-          host: 104.248.250.169
-          # Username for authentication.
-          user: root
-          # Password for authentication.
-          pass: HT7qt4hiDSgfAE
-      
-    
+      #- name: Remote SSH Commands
+      #  # You may pin to the exact commit or the version.
+      #  # uses: fifsky/ssh-action@58b3c484be9c20cf118fd3b939a6d2cb3c769512
+      #  uses: fifsky/ssh-action@v0.0.6
+      #  with:
+      #    # Command to execute on the remote server.
+      #    command: npm --prefix '/var/www/html/server.axie-raids.com/' install 
+      #    # Hostname or IP address of the server.
+      #    host: 104.248.250.169
+      #    # Username for authentication.
+      #    user: root
+      #    # Password for authentication.
+      #    pass: HT7qt4hiDSgfAE
+      #
+    #
       - name: Remote SSH Commands
         # You may pin to the exact commit or the version.
         # uses: fifsky/ssh-action@58b3c484be9c20cf118fd3b939a6d2cb3c769512
