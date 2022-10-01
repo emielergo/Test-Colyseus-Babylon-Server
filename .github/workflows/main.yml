@@ -72,7 +72,7 @@ jobs:
         uses: fifsky/ssh-action@v0.0.6
         with:
           # Command to execute on the remote server.
-          command: npm install '/var/www/html/server.axie-raids.com/'
+          command: cd '/var/www/html/server.axie-raids.com/' / npm install 
           # Hostname or IP address of the server.
           host: 104.248.250.169
           # Username for authentication.
