@@ -39,12 +39,17 @@ jobs:
           # Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.
           cache-dependency-path: package-lock.json
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: npm run build
-
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          npm install
+          npm run build
+      - name: Simple SFTP
+
+        uses: Atyn/simple-sftp-action@0.0.2
+        with:
+          # URL to the SFTP server. Example: sftp://USERNAME:PASSWORD@example.com/remote-directory
+          url: sftp://root:HT7qt4hiDSgfAE@104.248.250.169/var/home/www/server
+          # The directory that should be uploaded
+          localdir: dist
+      
