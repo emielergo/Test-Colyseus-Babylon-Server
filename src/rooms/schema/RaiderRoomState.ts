@@ -53,7 +53,7 @@ export class Bunker extends Schema {
 export class Player extends Schema {
   @type("number") number: number;
   @type("number") energy: number;
-  @type("number") clone_timer: number;
+  @type("number") clone_timer: number = 0;
   @type({ map: Axie }) axies = new MapSchema<Axie>();
   @type(Bunker) bunker: Bunker ;
 

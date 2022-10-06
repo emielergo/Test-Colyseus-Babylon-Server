@@ -72,7 +72,7 @@ export class MyRoom extends Room<RaiderRoomState> {
     onJoin(client: Client, options: any) {
         console.log(client.sessionId, "joined!");
         // create Player instance
-        const player = new Player(MyRoom.counter % 2 + 1, 20);
+        const player = new Player(MyRoom.counter % 2 + 1, 40);
         this.clock.setInterval(() => {
             if (this.clients.length == 2) {
                 player.energy++
