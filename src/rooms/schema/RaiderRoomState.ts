@@ -61,7 +61,6 @@ export class Player extends Schema {
     super();
     this.number = counter;
     this.energy = energy;
-    this.clone_timer = clone_timer;
     this.bunker = new Bunker('bunkerId' + this.number, 200, 5)
   }
 }
