@@ -56,11 +56,6 @@ export class MyRoom extends Room<RaiderRoomState> {
             const player = this.state.players.get(client.sessionId);
             player.energy = player.energy - data["energy_cost"];
         });
-
-        this.onMessage("updateCrystals", (client, data) => {
-            const player = this.state.players.get(client.sessionId);
-            player.crystals = data["crystals"];
-        });
     }
 
     //TODO: hier moet de renderloop in komen!
@@ -77,10 +72,11 @@ export class MyRoom extends Room<RaiderRoomState> {
     onJoin(client: Client, options: any) {
         console.log(client.sessionId, "joined!");
         // create Player instance
-        const player = new Player(MyRoom.counter % 2 + 1, 20, 10);
+        const player = new Player(MyRoom.counter % 2 + 1, 20);
         this.clock.setInterval(() => {
             if (this.clients.length == 2) {
                 player.energy++
+                player.clone_timer++;
             }
         }, 1000);
         MyRoom.counter++;
