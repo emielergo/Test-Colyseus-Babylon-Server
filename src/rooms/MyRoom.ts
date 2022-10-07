@@ -56,6 +56,13 @@ export class MyRoom extends Room<RaiderRoomState> {
             const player = this.state.players.get(client.sessionId);
             player.energy = player.energy - data["energy_cost"];
         });
+
+        this.onMessage("activatePowerPlant", (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            player.energy = player.energy - data["energy_cost"];
+            player.energy_multiplier++;
+            player.energy_delay = 10;
+        });
     }
 
     //TODO: hier moet de renderloop in komen!
@@ -75,7 +82,11 @@ export class MyRoom extends Room<RaiderRoomState> {
         const player = new Player(MyRoom.counter % 2 + 1, 40);
         this.clock.setInterval(() => {
             if (this.clients.length == 2) {
-                player.energy++
+                if (player.energy_delay <= 0) {
+                    player.energy += player.energy_multiplier;
+                } else {
+                    player.energy_delay--;
+                }
                 player.clone_timer++;
             }
         }, 1000);
