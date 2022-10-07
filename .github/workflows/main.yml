@@ -92,7 +92,7 @@ jobs:
         uses: fifsky/ssh-action@v0.0.6
         with:
           # Command to execute on the remote server.
-          command: pm2 start '/var/www/html/server.axie-raids.com/index.js'
+          command: pm2 restart '/var/www/html/server.axie-raids.com/index.js' --force
           # Hostname or IP address of the server.
           host: 104.248.250.169
           # Username for authentication.
