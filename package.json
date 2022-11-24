@@ -33,6 +33,7 @@
   "dependencies": {
     "@colyseus/arena": "0.15.0-preview.0",
     "@colyseus/monitor": "0.15.0-preview.0",
+    "babylonjs": "5.16.0",
     "colyseus": "0.15.0-preview.0",
     "cors": "^2.8.5",
     "express": "^4.16.4",
