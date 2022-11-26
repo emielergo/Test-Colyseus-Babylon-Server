@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import { Room, Client } from "@colyseus/core";
 import { Axie, Bullet, Bunker, Player, RaiderRoomState } from "./schema/RaiderRoomState";
-import { createBulletMesh, createGenericAxieMesh, getRotationVectorFromTarget } from "../utils";
+import { createBulletMesh, createBunker, createGenericAxieMesh, getRotationVectorFromTarget, initDropzone } from "../utils";
 import { int } from 'babylonjs';
 
 export class MyRoom extends Room<RaiderRoomState> {
@@ -16,27 +16,31 @@ export class MyRoom extends Room<RaiderRoomState> {
 
     //Game Objects
     private axiesByAxieIdByPlayerNumber: Map<int, Map<String, Axie>> = new Map<int, Map<String, Axie>>();
-    private dropzoneAxiesByPlayerNumber: Map<int, Axie[][]> = new Map<int, Axie[][]>();
-    private play_field_axies: Axie[];
-    private bullets: Bullet[];
-    private bunkerByPlayerNumber: Map<int, Bunker>;
+    private dropZoneAxiesByPlayerNumber: Map<int, Map<String, Axie>> = new Map<int, Map<String, Axie>>();
+    private play_field_axies: Axie[] = [];
+    private bullets: Bullet[] = [];
+    private bunkerByPlayerNumber: Map<int, Bunker> = new Map<int, Bunker>();
 
     // World
     private engine: BABYLON.Engine;
     private scene: BABYLON.Scene;
     private bullet: BABYLON.Mesh;
-    private generic_axie_mesh: BABYLON.AbstractMesh;
+    private generic_axie_mesh: BABYLON.Mesh;
 
     async onCreate(options: any) {
         console.log("MyRoom created.");
         this.setState(new RaiderRoomState());
         this.engine = new BABYLON.NullEngine();
+
         this.scene = new BABYLON.Scene(this.engine);
         this.generic_axie_mesh = await createGenericAxieMesh(this.scene);
         this.bullet = createBulletMesh(this.scene);
+
+
         this.setSimulationInterval((deltaTime) => this.update(deltaTime));
 
         this.clock.start();
+        this.clock.setInterval(() => this.broadcastPatch(), 5000);
 
         this.onMessage("updateAxie", (client, data) => {
             const player = this.state.players.get(client.sessionId);
@@ -57,14 +61,13 @@ export class MyRoom extends Room<RaiderRoomState> {
         });
 
         this.onMessage("insertAxie", (client, data) => {
-
             const player = this.state.players.get(client.sessionId);
             const axie = new Axie(data["id"], data["hp"], data["shield"], data["range"], data["damage"], data["level"], data["skin"], data["x"], data["y"], data["z"]);
+            axie.player_number = player.number;
             axie.setMesh(this.generic_axie_mesh);
             axie.setPositionFromStartingPosition();
-
             player.axies.set(axie.id, axie);
-
+            this.dropZoneAxiesByPlayerNumber.get(player.number).set(axie.id, axie);
         });
 
         this.onMessage("removeAxie", (client, data) => {
@@ -96,31 +99,37 @@ export class MyRoom extends Room<RaiderRoomState> {
     //TODO: hier moet de renderloop in komen!
     update(_deltaTime: number) {
         const remaining_bullets: Bullet[] = [];
-
-        if (this.clone_timer % 5 == 0 && this.clients.length == 2) {
-            this.clone_timer++;
-            this.dropzoneAxiesByPlayerNumber.forEach((axie_grid, player_number) => {
-                for (var i = 0; i < axie_grid.length; i++) {
-                    var axies = axie_grid[i];
-                    for (var j = 0; j < axies.length; j++) {
-                        let axie = axies[j];
-                        var clonedAxie = new Axie(axie.skin + player_number + this.cloned_counter, axie.hp, axie.shield, axie.range, axie.damage, axie.level, axie.skin, axie.starting_x, axie.starting_y, axie.starting_z);
-                        this.cloned_counter++;
-                        clonedAxie.offsetPositionForSpawn(player_number == 1);
-                        clonedAxie.player_number = player_number;
-                    }
-                }
+        if (this.clone_timer % 250 == 0 && this.clients.length == 2) {
+            this.state.players.forEach(player => {
+                const new_axies: Axie[] = [];
+                this.dropZoneAxiesByPlayerNumber.get(player.number).forEach((axie) => {
+                    var clonedAxie = new Axie(axie.skin + player.number + this.cloned_counter, axie.hp, axie.shield, axie.range, axie.damage, axie.level, axie.skin, axie.starting_x, axie.starting_y, axie.starting_z);
+                    this.cloned_counter++;
+                    clonedAxie.offsetPositionForSpawn(player.number == 1);
+                    clonedAxie.player_number = player.number;
+                    clonedAxie.setMesh(axie.mesh);
+                    new_axies.push(clonedAxie);
+                })
+                new_axies.forEach(new_axie => {
+                    player.axies.set(new_axie.id, new_axie);
+                    this.play_field_axies.push(new_axie);
+                    this.axiesByAxieIdByPlayerNumber.get(player.number).set(new_axie.id, new_axie);
+                });
             })
         }
+        this.clone_timer++;
 
         // MOVE AND ATTACK WITH AXIES
         if (this.play_field_axies && this.play_field_axies.length > 0) {
             this.play_field_axies.forEach((axie) => {
-                const enemy_player_number = (axie.player_number + 1) % 2;
+                const enemy_player_number = axie.player_number == 1 ? 2 : 1;
                 axie.locateTarget(this.axiesByAxieIdByPlayerNumber.get(enemy_player_number), this.bunkerByPlayerNumber.get(enemy_player_number));
                 if (!axie.isInRangeOfTarget()) {
                     axie.mesh.rotation = getRotationVectorFromTarget(new BABYLON.Vector3(0, 1, 0), axie.mesh as BABYLON.Mesh, axie.target);
                     axie.mesh.movePOV(this.axie_speed, 0, 0);
+                    axie.x = axie.mesh.position.x;
+                    axie.y = axie.mesh.position.y;
+                    axie.z = axie.mesh.position.z;
 
                 } else if (axie.reload_time <= 0) {
                     const bullet_clone = axie.useCards(this.bullet);
@@ -212,13 +221,14 @@ export class MyRoom extends Room<RaiderRoomState> {
             }
         }, 1000);
         MyRoom.counter++;
-        player.bunker = new Bunker('bunker ' + player.number, 200, 15);
+        player.bunker = createBunker(player.number);
+        this.axiesByAxieIdByPlayerNumber.set(player.number, new Map<String, Axie>());
+        this.dropZoneAxiesByPlayerNumber.set(player.number, new Map<String, Axie>());
+        this.bunkerByPlayerNumber.set(player.number, player.bunker);
 
-        // place axie in the map of axies by its sessionId
         // (client.sessionId is unique per connection!)
         this.state.players.set(client.sessionId, player);
 
-        // console.log("new player =>", player.toJSON());
     }
 
     onLeave(client: Client, consented: boolean) {

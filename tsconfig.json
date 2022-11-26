@@ -9,6 +9,7 @@
         "esModuleInterop": true,
         "experimentalDecorators": true,
         "skipLibCheck": true,
+        "types": ["babylonjs", "babylonjs-loaders", "babylonjs-gui", "babylonjs-materials", "node"],
         "forceConsistentCasingInFileNames": true
     },
     "include": ["src"]

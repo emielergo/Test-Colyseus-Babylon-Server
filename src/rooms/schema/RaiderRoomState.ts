@@ -21,16 +21,13 @@ export class Axie extends Schema {
   public static AXIE_VIEW_RANGE = 20;
 
   public target: (Axie | Bunker);
-  public mesh: BABYLON.AbstractMesh;
+  public mesh: BABYLON.Mesh;
 
   public attacking_axies: Axie[] = [];
   public incoming_bullets: Bullet[] = [];
 
   public player_number: int;
   public reload_time = 10;
-  public starting_x: int;
-  public starting_y: int;
-  public starting_z: int;
 
   constructor(id: string, hp: number, shield: number, range: number, damage: number, level: number, skin: string, x: int, y: int, z: int) {
     super();
@@ -48,13 +45,13 @@ export class Axie extends Schema {
     this.z = z;
   }
 
-  setMesh(mesh: BABYLON.AbstractMesh): void {
-    this.mesh = mesh;
+  setMesh(mesh: BABYLON.Mesh): void {
+    this.mesh = mesh.clone();
   }
 
   setPositionFromStartingPosition(): void {
-    if (this.starting_x && this.starting_y && this.starting_z && this.mesh) {
-      this.mesh.position = new BABYLON.Vector3(this.starting_x, this.starting_y, this.starting_z);
+    if (this.x && this.y && this.z && this.mesh) {
+      this.mesh.position = new BABYLON.Vector3(this.x, this.y, this.z);
     }
   }
 
@@ -70,6 +67,7 @@ export class Axie extends Schema {
 
   isInRangeOfTarget(): boolean {
     if (this.range == 0) {
+      // console.log(this.mesh.intersectsMesh(this.target.mesh));
       return this.target ? this.mesh.intersectsMesh(this.target.mesh) : false;
     } else {
       return this.target && this.mesh ? this.mesh.position.subtract(this.target.mesh.position).length() < this.range ? true : false : false;
@@ -82,7 +80,7 @@ export class Axie extends Schema {
 
   locateTarget(enemy_axies_by_id: Map<String, Axie>, enemy_bunker: Bunker) {
     // TODO: When a target is found within range -> Break. Any Target within range will do fine!
-    if (!this.target || !this.isInViewingRangeOfTarget(this.target)) {
+    if (!this.target || (this.target && !this.isInViewingRangeOfTarget(this.target))) {
 
       if (enemy_axies_by_id && enemy_axies_by_id.size > 0) {
         let closest_axie: Axie;
@@ -180,11 +178,13 @@ export class Bunker extends Schema {
   public attacking_axies: Axie[] = [];
   public incoming_bullets: Bullet[] = [];
 
-  constructor(id: string, hp: number, range: number) {
+  constructor(id: string, player_number: number, hp: number, range: number, mesh: BABYLON.Mesh) {
     super();
-    this.id = id;
+    this.id = id + player_number;
+    this.player_number = player_number;
     this.hp = hp;
     this.range = range;
+    this.mesh = mesh;
   }
 
   inflictDamage(damage: int): void {
@@ -247,7 +247,6 @@ export class Player extends Schema {
     super();
     this.number = counter;
     this.energy = energy;
-    this.bunker = new Bunker('bunkerId' + this.number, 200, 5)
   }
 }
 
