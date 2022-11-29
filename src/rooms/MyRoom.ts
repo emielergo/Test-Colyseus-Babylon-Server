@@ -100,15 +100,17 @@ export class MyRoom extends Room<RaiderRoomState> {
     //TODO: hier moet de renderloop in komen!
     update(_deltaTime: number) {
         const remaining_bullets: Bullet[] = [];
+        const targets_to_dispose: Axie[] = [];
+
         if (this.clone_timer % 250 == 0 && this.clients.length == 2) {
             this.state.players.forEach(player => {
                 const new_axies: Axie[] = [];
                 this.dropZoneAxiesByPlayerNumber.get(player.number).forEach((axie) => {
                     var clonedAxie = new Axie(axie.skin + player.number + this.cloned_counter, axie.hp, axie.shield, axie.range, axie.damage, axie.level, axie.skin, axie.x, axie.y, axie.z);
                     this.cloned_counter++;
+                    clonedAxie.setMesh(axie.mesh);
                     clonedAxie.offsetPositionForSpawn(player.number == 1);
                     clonedAxie.player_number = player.number;
-                    clonedAxie.setMesh(axie.mesh);
                     new_axies.push(clonedAxie);
                 })
                 new_axies.forEach(new_axie => {
@@ -141,17 +143,13 @@ export class MyRoom extends Room<RaiderRoomState> {
                     if (axie.target.hp <= 0) {
                         var target = axie.target;
                         if (target instanceof Axie) {
-                            target.dispose();
-                            this.state.players.get(this.playerIdByPlayerNumber.get(enemy_player_number)).axies.delete(target.id);
-                            this.axiesByAxieIdByPlayerNumber.get(enemy_player_number).delete(target.id);
+                            targets_to_dispose.push(target);
                         }
                     }
                 } else {
                     axie.reload_time--;
                 }
             })
-
-            this.play_field_axies = this.play_field_axies.filter(axie => axie.hp > 0);
         }
 
         if (this.bunkerByPlayerNumber && this.bunkerByPlayerNumber.values()) {
@@ -188,9 +186,9 @@ export class MyRoom extends Room<RaiderRoomState> {
                     bullet.target.inflictDamage(bullet.damage);
                     if (bullet.target.hp <= 0) {
                         var target = bullet.target;
+                        const enemy_player_number = target.player_number;
                         if (target instanceof Axie) {
-                            this.play_field_axies.splice(this.play_field_axies.indexOf(target));
-                            target.dispose();
+                            targets_to_dispose.push(target);
                         }
                     }
                     this.state.bullets.delete(bullet.id);
@@ -201,6 +199,13 @@ export class MyRoom extends Room<RaiderRoomState> {
                 }
             })
         }
+
+        targets_to_dispose.forEach(target => {
+            target.dispose();
+            this.play_field_axies.splice(this.play_field_axies.indexOf(target), 1);
+            this.state.players.get(this.playerIdByPlayerNumber.get(target.player_number)).axies.delete(target.id);
+            this.axiesByAxieIdByPlayerNumber.get(target.player_number).delete(target.id);
+        })
 
         this.bullets = remaining_bullets;
 
