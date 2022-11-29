@@ -41,10 +41,16 @@ export var createGenericAxieMesh = async function createGenericAxieMesh(scene: B
     // });
     // // buba.position = new BABYLON.Vector3(0, 1, 180);
     // // buba.actionManager = new BABYLON.ActionManager(scene);
+    const generic_axie = BABYLON.MeshBuilder.CreateSphere('generic_axie', { diameter: 1 })
+
+    let axie_material = new BABYLON.StandardMaterial("axie_material", scene);
+
+    axie_material.diffuseColor = BABYLON.Color3.Black();
+    generic_axie.material = axie_material;
 
 
     // return buba;
-    return BABYLON.MeshBuilder.CreateSphere('generic_axie', { diameter: 1 });
+    return generic_axie;
 }
 
 export var initDropzone = function initDropzone(): Axie[][] {

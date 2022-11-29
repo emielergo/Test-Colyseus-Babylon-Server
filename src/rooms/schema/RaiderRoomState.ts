@@ -67,8 +67,9 @@ export class Axie extends Schema {
 
   isInRangeOfTarget(): boolean {
     if (this.range == 0) {
-      // console.log(this.mesh.intersectsMesh(this.target.mesh));
-      return this.target ? this.mesh.intersectsMesh(this.target.mesh) : false;
+      // TODO: Intersect does not seem to be working on server?
+      // return this.target ? this.mesh.intersectsMesh(this.target.mesh) : false;
+      return this.target ? BABYLON.Vector3.Distance(this.mesh.position, this.target.mesh.position) <= 0.5 : false;
     } else {
       return this.target && this.mesh ? this.mesh.position.subtract(this.target.mesh.position).length() < this.range ? true : false : false;
     }
@@ -108,7 +109,6 @@ export class Axie extends Schema {
       if (!this.target) {
         this.target = enemy_bunker;
       }
-
     }
   }
 
@@ -158,6 +158,7 @@ export class Axie extends Schema {
 
   disposeIncomingBullets(): void {
     this.incoming_bullets.forEach((bullet) => {
+
         bullet.mesh.dispose();
     })
 }
@@ -206,18 +207,24 @@ export class Bullet extends Schema {
   @type("number") z: number;
 
   public static BULLET_SPEED = -0.5;
+  public static BULLET_COUNTER = 1;
 
   public target: Axie | Bunker;
   public mesh: BABYLON.Mesh;
 
   constructor(id: string, damage: number, speed: number, mesh: BABYLON.Mesh, target: Axie | Bunker) {
     super();
-    this.id = id;
+    this.id = id + Bullet.BULLET_COUNTER;
     this.damage = damage;
     this.speed = speed;
     this.mesh = mesh;
     this.target = target;
     target.incoming_bullets.push(this);
+    this.x = this.mesh.position.x;
+    this.y = this.mesh.position.y;
+    this.z = this.mesh.position.z;
+
+    Bullet.BULLET_COUNTER++;
   }
 
   clone_bullet(): Bullet {
@@ -253,6 +260,7 @@ export class Player extends Schema {
 
 export class RaiderRoomState extends Schema {
   @type({ map: Player }) players = new MapSchema<Player>();
+  @type({ map: Bullet }) bullets = new MapSchema<Bullet>();
 }
 
 

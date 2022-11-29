@@ -9,7 +9,7 @@ export class MyRoom extends Room<RaiderRoomState> {
     private static counter = 0;
 
     //Game Constants
-    private axie_speed = - 0.25;
+    private axie_speed = - 1;
     private reload_time = 0;
     private clone_timer = 0;
     private cloned_counter = 0;
@@ -20,6 +20,7 @@ export class MyRoom extends Room<RaiderRoomState> {
     private play_field_axies: Axie[] = [];
     private bullets: Bullet[] = [];
     private bunkerByPlayerNumber: Map<int, Bunker> = new Map<int, Bunker>();
+    private playerIdByPlayerNumber: Map<int, string> = new Map<int, string>();
 
     // World
     private engine: BABYLON.Engine;
@@ -103,7 +104,7 @@ export class MyRoom extends Room<RaiderRoomState> {
             this.state.players.forEach(player => {
                 const new_axies: Axie[] = [];
                 this.dropZoneAxiesByPlayerNumber.get(player.number).forEach((axie) => {
-                    var clonedAxie = new Axie(axie.skin + player.number + this.cloned_counter, axie.hp, axie.shield, axie.range, axie.damage, axie.level, axie.skin, axie.starting_x, axie.starting_y, axie.starting_z);
+                    var clonedAxie = new Axie(axie.skin + player.number + this.cloned_counter, axie.hp, axie.shield, axie.range, axie.damage, axie.level, axie.skin, axie.x, axie.y, axie.z);
                     this.cloned_counter++;
                     clonedAxie.offsetPositionForSpawn(player.number == 1);
                     clonedAxie.player_number = player.number;
@@ -135,19 +136,21 @@ export class MyRoom extends Room<RaiderRoomState> {
                     const bullet_clone = axie.useCards(this.bullet);
                     if (bullet_clone) {
                         this.bullets.push(bullet_clone);
+                        this.state.bullets.set(bullet_clone.id, bullet_clone);
                     }
                     if (axie.target.hp <= 0) {
                         var target = axie.target;
                         if (target instanceof Axie) {
-                            this.play_field_axies.splice(this.play_field_axies.indexOf(target));
                             target.dispose();
+                            this.state.players.get(this.playerIdByPlayerNumber.get(enemy_player_number)).axies.delete(target.id);
+                            this.axiesByAxieIdByPlayerNumber.get(enemy_player_number).delete(target.id);
                         }
                     }
                 } else {
                     axie.reload_time--;
                 }
-            }
-            )
+            })
+
             this.play_field_axies = this.play_field_axies.filter(axie => axie.hp > 0);
         }
 
@@ -177,7 +180,11 @@ export class MyRoom extends Room<RaiderRoomState> {
                 //     bullet.dispose();
                 bullet.mesh.rotation = getRotationVectorFromTarget(new BABYLON.Vector3(0, 1, 0), bullet.mesh, bullet.target);
                 bullet.mesh.movePOV(bullet.speed, 0, 0);
-                if (bullet.mesh.intersectsMesh(bullet.target.mesh)) {
+                bullet.x = bullet.mesh.position.x;
+                bullet.y = bullet.mesh.position.y;
+                bullet.z = bullet.mesh.position.z;
+                // if (bullet.mesh.intersectsMesh(bullet.target.mesh)) { // Werkt analoog als bij Axies niet...
+                if (BABYLON.Vector3.Distance(bullet.mesh.position, bullet.target.mesh.position) <= 0.5) {
                     bullet.target.inflictDamage(bullet.damage);
                     if (bullet.target.hp <= 0) {
                         var target = bullet.target;
@@ -186,6 +193,7 @@ export class MyRoom extends Room<RaiderRoomState> {
                             target.dispose();
                         }
                     }
+                    this.state.bullets.delete(bullet.id);
                     bullet.dispose();
                 } else {
                     // bullet.age++;
@@ -225,6 +233,7 @@ export class MyRoom extends Room<RaiderRoomState> {
         this.axiesByAxieIdByPlayerNumber.set(player.number, new Map<String, Axie>());
         this.dropZoneAxiesByPlayerNumber.set(player.number, new Map<String, Axie>());
         this.bunkerByPlayerNumber.set(player.number, player.bunker);
+        this.playerIdByPlayerNumber.set(player.number, client.sessionId);
 
         // (client.sessionId is unique per connection!)
         this.state.players.set(client.sessionId, player);
