@@ -5,6 +5,8 @@ import 'babylonjs-loaders'
 
 const DROPZONE_WIDTH = 40;
 const DROPZONE_DEPTH = 10;
+export const GRIDIFIED_PLAYFIELD_DEPTH = 58;
+export const GRIDIFIED_PLAYFIELD_WIDTH = 6;
 
 export var getRotationVectorFromTarget = function (xnormal: BABYLON.Vector3, mesh: BABYLON.Mesh, target: Axie | Bunker) {
     let forward = target.mesh.position.subtract(mesh.position);
@@ -60,4 +62,30 @@ export var initDropzone = function initDropzone(): Axie[][] {
     }
 
     return dropzone_array;
+}
+
+export var createPlayFieldGrid = function createPlayFieldGrid() : Axie[][]{
+    const play_field_grid = [];
+    for (let i = 0; i <= GRIDIFIED_PLAYFIELD_DEPTH; i++) {
+        play_field_grid[i] = [];
+    }
+
+    return play_field_grid;
+}
+
+
+/* player 1 -- > x = -15 - +15
+player 1 -- > z = 155 - 170  with offset z = 120 - 145
+player 2 -- > x = -15 - +15
+player 2 -- > z = -155 - -170 with offset z = -120 - -145 */
+export var cloneToGrid = function cloneToGrid(cloned_axie: Axie, grid : Axie[][]): void {
+    const x = cloned_axie.mesh.position.x;
+    const z = cloned_axie.mesh.position.z;
+
+    const i = (z + 145) / 5;
+    const j = (x + 15) / 5;
+
+    if (!grid[i][j]){
+        grid[i][j] = cloned_axie;
+    }
 }

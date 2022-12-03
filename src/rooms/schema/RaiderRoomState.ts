@@ -1,6 +1,7 @@
 import { MapSchema, ArraySchema, Schema, type } from "@colyseus/schema";
 import * as BABYLON from 'babylonjs';
 import { int } from "babylonjs";
+import { GRIDIFIED_PLAYFIELD_DEPTH } from "../../utils";
 
 export class Axie extends Schema {
   @type("string") id: string;
@@ -37,6 +38,7 @@ export class Axie extends Schema {
     this.shield = shield;
     this.maxShield = shield;
     this.range = range;
+    // this.range = 50;
     this.damage = damage;
     this.level = level;
     this.skin = skin;
@@ -75,40 +77,61 @@ export class Axie extends Schema {
     }
   }
 
+  isInGridPosition(i: number, j: number): boolean {
+    let in_position = false;
+
+    if (Math.abs(((this.mesh.position.z + 145) / 5) - i) < 5) {
+      in_position = true;
+    }
+
+    return in_position;
+  }
+
+  isNextTileOpen(play_field_grid: Axie[][], i: number, j: number) {
+    const next_tile_index = i + Math.pow(-1, this.player_number);
+    let next_tile_open = false;
+
+    if (next_tile_index >= 0 && next_tile_index <= GRIDIFIED_PLAYFIELD_DEPTH) {
+      if (!play_field_grid[next_tile_index][j])
+        next_tile_open = true;
+    }
+
+    return next_tile_open;
+  }
+
+  moveToNextTile(play_field_grid: Axie[][], i: number, j: number) {
+    const next_tile_index = i + Math.pow(-1, this.player_number);
+
+    if (next_tile_index >= 0 && next_tile_index <= GRIDIFIED_PLAYFIELD_DEPTH) {
+      play_field_grid[i][j] = null;
+      play_field_grid[next_tile_index][j] = this;
+    }
+  }
+
   isInViewingRangeOfTarget(potential_target: Axie | Bunker): boolean {
     return this.mesh.position.subtract(potential_target.mesh.position).length() < Axie.AXIE_VIEW_RANGE;
   }
 
-  locateTarget(enemy_axies_by_id: Map<String, Axie>, enemy_bunker: Bunker) {
-    // TODO: When a target is found within range -> Break. Any Target within range will do fine!
-    if (!this.target || (this.target && !this.isInViewingRangeOfTarget(this.target))) {
+  locateTarget(play_field_grid: Axie[][], i: number, j: number) {
+    let direction_indicator = 1;
+    if (this.player_number == 2) {
+      direction_indicator = -1;
+    }
 
-      if (enemy_axies_by_id && enemy_axies_by_id.size > 0) {
-        let closest_axie: Axie;
-        let closest_axie_distance: number
-        enemy_axies_by_id.forEach((value, key) => {
-          if (this.isInViewingRangeOfTarget(value)) {
-            if (!closest_axie) {
-              closest_axie = value;
-              closest_axie_distance = this.mesh.position.subtract(closest_axie.mesh.position).length();
-            } else {
-              let iteration_distance = this.mesh.position.subtract(value.mesh.position).length();
-              if (iteration_distance < closest_axie_distance) {
-                if (Math.random() < 0.9) {
-                  closest_axie = value;
-                  closest_axie_distance = iteration_distance;
-                }
-              }
-            }
-          }
-        });
+    const target_row = play_field_grid[i + direction_indicator];
+    let target;
+    if (target_row) {
+      target = target_row[j];
 
-        this.target = closest_axie;
+      if (!target) {
+        target = target_row[j - 1];
+      } else if (!target) {
+        target = target_row[j + 1]
       }
+    }
 
-      if (!this.target) {
-        this.target = enemy_bunker;
-      }
+    if (target) {
+      this.target = target;
     }
   }
 
@@ -159,9 +182,9 @@ export class Axie extends Schema {
   disposeIncomingBullets(): void {
     this.incoming_bullets.forEach((bullet) => {
 
-        bullet.mesh.dispose();
+      bullet.mesh.dispose();
     })
-}
+  }
 }
 
 export class Bunker extends Schema {
@@ -174,8 +197,12 @@ export class Bunker extends Schema {
   @type("number") y: number;
   @type("number") z: number;
 
+  public static BUNKER_VIEW_RANGE = 100;
+
   public player_number: int;
+  public reload_time: number = 25;
   public mesh: BABYLON.Mesh;
+  public target: Axie;
   public attacking_axies: Axie[] = [];
   public incoming_bullets: Bullet[] = [];
 
@@ -186,6 +213,7 @@ export class Bunker extends Schema {
     this.hp = hp;
     this.range = range;
     this.mesh = mesh;
+    this.damage = 100;
   }
 
   inflictDamage(damage: int): void {
@@ -194,9 +222,42 @@ export class Bunker extends Schema {
 
   disposeIncomingBullets(): void {
     this.incoming_bullets.forEach((bullet) => {
-        bullet.mesh.dispose();
+      bullet.mesh.dispose();
     })
-}
+  }
+
+  locateTarget(enemy_axies_by_id: Map<String, Axie>): Axie {
+    // TODO: When a target is found within range -> Break. Any Target within range will do fine!
+    if (!this.target || (this.target && !this.isInViewingRangeOfTarget(this.target))) {
+
+      if (enemy_axies_by_id && enemy_axies_by_id.size > 0) {
+        let closest_axie: Axie;
+        let closest_axie_distance: number
+        enemy_axies_by_id.forEach((value, key) => {
+          if (this.isInViewingRangeOfTarget(value)) {
+            if (!closest_axie) {
+              closest_axie = value;
+              closest_axie_distance = this.mesh.position.subtract(closest_axie.mesh.position).length();
+            } else {
+              let iteration_distance = this.mesh.position.subtract(value.mesh.position).length();
+              if (iteration_distance < closest_axie_distance) {
+                closest_axie = value;
+                closest_axie_distance = iteration_distance;
+              }
+            }
+          }
+        });
+
+        this.target = closest_axie;
+      }
+    }
+
+    return this.target;
+  }
+
+  isInViewingRangeOfTarget(potential_target: Axie): boolean {
+    return this.mesh.position.subtract(potential_target.mesh.position).length() < Bunker.BUNKER_VIEW_RANGE;
+  }
 }
 export class Bullet extends Schema {
   @type("string") id: string;
