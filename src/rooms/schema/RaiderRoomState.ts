@@ -29,6 +29,8 @@ export class Axie extends Schema {
 
   public player_number: int;
   public reload_time = 10;
+  public grid_value_i: number;
+  public grid_value_j: number;
 
   constructor(id: string, hp: number, shield: number, range: number, damage: number, level: number, skin: string, x: int, y: int, z: int) {
     super();
@@ -77,34 +79,35 @@ export class Axie extends Schema {
     }
   }
 
-  isInGridPosition(i: number, j: number): boolean {
+  isInGridPosition(): boolean {
     let in_position = false;
 
-    if (Math.abs(((this.mesh.position.z + 145) / 5) - i) < 5) {
+    if (Math.abs(((this.mesh.position.z + 145) / 5) - this.grid_value_i) < 0.2) {
       in_position = true;
     }
 
     return in_position;
   }
 
-  isNextTileOpen(play_field_grid: Axie[][], i: number, j: number) {
-    const next_tile_index = i + Math.pow(-1, this.player_number);
+  isNextTileOpen(play_field_grid: Axie[][]) {
+    const next_tile_index = this.grid_value_i + Math.pow(-1, this.player_number);
     let next_tile_open = false;
 
     if (next_tile_index >= 0 && next_tile_index <= GRIDIFIED_PLAYFIELD_DEPTH) {
-      if (!play_field_grid[next_tile_index][j])
+      if (!play_field_grid[next_tile_index][this.grid_value_j])
         next_tile_open = true;
     }
 
     return next_tile_open;
   }
 
-  moveToNextTile(play_field_grid: Axie[][], i: number, j: number) {
-    const next_tile_index = i + Math.pow(-1, this.player_number);
+  moveToNextTile(play_field_grid: Axie[][]) {
+    const next_tile_index = this.grid_value_i + Math.pow(-1, this.player_number);
 
     if (next_tile_index >= 0 && next_tile_index <= GRIDIFIED_PLAYFIELD_DEPTH) {
-      play_field_grid[i][j] = null;
-      play_field_grid[next_tile_index][j] = this;
+      play_field_grid[this.grid_value_i][this.grid_value_j] = null;
+      play_field_grid[next_tile_index][this.grid_value_j] = this;
+      this.grid_value_i = next_tile_index;
     }
   }
 
@@ -112,23 +115,38 @@ export class Axie extends Schema {
     return this.mesh.position.subtract(potential_target.mesh.position).length() < Axie.AXIE_VIEW_RANGE;
   }
 
-  locateTarget(play_field_grid: Axie[][], i: number, j: number) {
+  locateTarget(play_field_grid: Axie[][]) {
     let direction_indicator = 1;
+    const rows_in_range = [];
+
     if (this.player_number == 2) {
       direction_indicator = -1;
     }
 
-    const target_row = play_field_grid[i + direction_indicator];
-    let target;
-    if (target_row) {
-      target = target_row[j];
-
-      if (!target) {
-        target = target_row[j - 1];
-      } else if (!target) {
-        target = target_row[j + 1]
+    if (this.range == 0) {
+      rows_in_range.push(this.grid_value_i + direction_indicator);
+    } else {
+      for (let row_in_range = 0; this.grid_value_i <= this.range; this.grid_value_i++) {
+        rows_in_range.push(this.grid_value_i + direction_indicator * row_in_range);
       }
     }
+
+    let target;
+    rows_in_range.forEach(target_row_index => {
+      const target_row = play_field_grid[target_row_index];
+
+      if (target_row) {
+        target = target_row[this.grid_value_j];
+
+        if (!target) {
+          target = target_row[this.grid_value_j - 1];
+        }
+
+        if (!target) {
+          target = target_row[this.grid_value_j + 1]
+        }
+      }
+    })
 
     if (target) {
       this.target = target;
@@ -224,6 +242,17 @@ export class Bunker extends Schema {
     this.incoming_bullets.forEach((bullet) => {
       bullet.mesh.dispose();
     })
+  }
+
+  shootBullet(bullet_mesh: BABYLON.Mesh, target: Axie): Bullet {
+    let bullet = new Bullet('bullet', this.damage, Bullet.BULLET_SPEED, bullet_mesh.clone(), target);
+    bullet.mesh.position = this.mesh.position.clone();
+
+    bullet.x = this.mesh.position.x;
+    bullet.y = this.mesh.position.y;
+    bullet.z = this.mesh.position.z;
+
+    return bullet;
   }
 
   locateTarget(enemy_axies_by_id: Map<String, Axie>): Axie {

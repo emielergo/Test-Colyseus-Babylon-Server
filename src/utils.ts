@@ -87,5 +87,9 @@ export var cloneToGrid = function cloneToGrid(cloned_axie: Axie, grid : Axie[][]
 
     if (!grid[i][j]){
         grid[i][j] = cloned_axie;
+        cloned_axie.grid_value_i = i;
+        cloned_axie.grid_value_j = j;
+    }else{
+        console.log('Grid is full ' + i + ' ' + j);
     }
 }

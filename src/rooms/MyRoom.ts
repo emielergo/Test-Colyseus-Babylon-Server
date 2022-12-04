@@ -13,6 +13,7 @@ export class MyRoom extends Room<RaiderRoomState> {
     private reload_time = 0;
     private clone_timer = 0;
     private cloned_counter = 0;
+    private loop_counter = 0;
 
     //Game Objects
     private axiesByAxieIdByPlayerNumber: Map<int, Map<String, Axie>> = new Map<int, Map<String, Axie>>();
@@ -67,9 +68,9 @@ export class MyRoom extends Room<RaiderRoomState> {
             const axie = new Axie(data["id"], data["hp"], data["shield"], data["range"], data["damage"], data["level"], data["skin"], data["x"], data["y"], data["z"]);
             axie.player_number = player.number;
             axie.setMesh(this.generic_axie_mesh);
-            axie.setPositionFromStartingPosition();
-            // player.axies.set(axie.id, axie); // Niet doen om dubbels in client te voorkomen.
+            axie.mesh.position = new BABYLON.Vector3(data["x"], data["y"], data["z"]);
             this.dropZoneAxiesByPlayerNumber.get(player.number).set(axie.id, axie);
+            axie.setPositionFromStartingPosition();
         });
 
         this.onMessage("removeAxie", (client, data) => {
@@ -100,8 +101,10 @@ export class MyRoom extends Room<RaiderRoomState> {
 
     //TODO: hier moet de renderloop in komen!
     update(_deltaTime: number) {
-        const remaining_bullets: Bullet[] = [];
         const targets_to_dispose: Axie[] = [];
+        const remaining_bullets: Bullet[] = [];
+        const bullets_to_dispose: Bullet[] = [];
+        this.loop_counter++;
 
         if (this.clone_timer % 250 == 0 && this.clients.length == 2) {
             this.state.players.forEach(player => {
@@ -110,12 +113,9 @@ export class MyRoom extends Room<RaiderRoomState> {
                     var cloned_axie = new Axie(axie.skin + player.number + this.cloned_counter, axie.hp, axie.shield, axie.range, axie.damage, axie.level, axie.skin, axie.x, axie.y, axie.z);
                     this.cloned_counter++;
                     cloned_axie.setMesh(axie.mesh);
-                    // console.log(cloned_axie.mesh.position);
                     cloned_axie.offsetPositionForSpawn(player.number == 1);
-                    // console.log(cloned_axie.mesh.position + ' afterOffset');
-                    // console.log(axie.mesh.position + '  -  ' + cloned_axie.mesh.position);
                     if (player.number == 2) {
-                        cloned_axie.mesh.rotation = BABYLON.Vector3.RotationFromAxis(new BABYLON.Vector3(-1, 0, 0), new BABYLON.Vector3(0, 1, 0), new BABYLON.Vector3(0, 0,-1));
+                        cloned_axie.mesh.rotation = BABYLON.Vector3.RotationFromAxis(new BABYLON.Vector3(-1, 0, 0), new BABYLON.Vector3(0, 1, 0), new BABYLON.Vector3(0, 0, -1));
                     }
                     cloned_axie.player_number = player.number;
                     cloned_axies.push(cloned_axie);
@@ -134,26 +134,12 @@ export class MyRoom extends Room<RaiderRoomState> {
             for (let j = 0; j <= GRIDIFIED_PLAYFIELD_WIDTH; j++) {
                 const axie = this.play_field_grid[i][j];
                 if (axie) {
-                    if (axie.isInGridPosition(i, j)) {
-                        axie.locateTarget(this.play_field_grid, i, j);
+                    if (axie.isInGridPosition()) {
+                        axie.locateTarget(this.play_field_grid);
 
-                        if (axie.target && axie.reload_time <= 0) {
-                            axie.mesh.rotation = getRotationVectorFromTarget(new BABYLON.Vector3(0, 1, 0), axie.mesh as BABYLON.Mesh, axie.target);
-                            // const bullet_clone = axie.useCards(this.bullet);
-                            // if (bullet_clone) {
-                            //     this.bullets.push(bullet_clone);
-                            //     this.state.bullets.set(bullet_clone.id, bullet_clone);
-                            // }
-                            // if (axie.target.hp <= 0) {
-                            //     var target = axie.target;
-                            //     if (target instanceof Axie) {
-                            //         targets_to_dispose.push (target);
-                            //     }
-                            // }
-                            axie.reload_time = 50;
-                        } else if (!axie.target) {
-                            if (axie.isNextTileOpen(this.play_field_grid, i, j)) {
-                                axie.moveToNextTile(this.play_field_grid, i, j);
+                        if (!axie.target) {
+                            if (axie.isNextTileOpen(this.play_field_grid)) {
+                                axie.moveToNextTile(this.play_field_grid);
                                 // console.log(Math.pow(-1, axie.player_number) * this.axie_speed);
                                 // axie.mesh.movePOV(0, 0, Math.pow(-1, axie.player_number) * this.axie_speed);
                                 axie.mesh.movePOV(0, 0, -this.axie_speed);
@@ -161,8 +147,16 @@ export class MyRoom extends Room<RaiderRoomState> {
                                 axie.y = axie.mesh.position.y;
                                 axie.z = axie.mesh.position.z;
                             }
-
-                        } else if (axie.reload_time <= 0) {
+                        } else if (axie.target && axie.reload_time <= 0) {
+                            const bullet_clone = axie.useCards(this.bullet);
+                            if (bullet_clone) {
+                                this.bullets.push(bullet_clone);
+                                this.state.bullets.set(bullet_clone.id, bullet_clone);
+                            }
+                            if (axie.target.hp <= 0 && axie.target instanceof Axie) {
+                                targets_to_dispose.push(axie.target);
+                            }
+                            axie.reload_time = 50;
 
                         } else {
                             axie.reload_time--;
@@ -183,49 +177,49 @@ export class MyRoom extends Room<RaiderRoomState> {
         if (this.bunkerByPlayerNumber && this.bunkerByPlayerNumber.values()) {
             this.bunkerByPlayerNumber.forEach((bunker, player_number) => {
 
-                // Bunker Shoots
-                const enemy_player_number = bunker.player_number == 1 ? 2 : 1;
-                // if (this.axiesByAxieIdByPlayerNumber.get(enemy_player_number) && this.axiesByAxieIdByPlayerNumber.get(enemy_player_number).size > 0) {
-                //     if (bunker.reload_time == 0) {
-                //         let target = bunker.locateTarget(this.axiesByAxieIdByPlayerNumber.get(enemy_player_number));
-                //         if (target) {
-                //             var bullet = new Bullet('bullet', bunker.damage, Bullet.BULLET_SPEED, this.bullet.clone(), target);
-                //             bullet.mesh.position = bunker.mesh.position.clone();
-                //             this.bullets.push(bullet);
-                //             this.state.bullets.set(bullet.id, bullet);
-                //             bunker.reload_time = 25;
-                //         }
-                //     }else{
-                //         bunker.reload_time --;
-                //     }
-                // }
+                if (bunker.reload_time <= 0) {
+                    // Bunker Shoots
+                    const front_line = player_number == 1 ? GRIDIFIED_PLAYFIELD_DEPTH : 0;
+                    for (let j = 0; j <= GRIDIFIED_PLAYFIELD_WIDTH; j++) {
+                        const target = this.play_field_grid[front_line][j];
+                        if (target) {
+                            let bullet = bunker.shootBullet(this.bullet, target);
+                            this.state.bullets.set(bullet.id, bullet);
+                            this.bullets.push(bullet);
+                        }
+                    }
+
+                    bunker.reload_time = 25;
+                }
+
+                bunker.reload_time--;
             })
         }
 
         // Move Bullets
         if (this.bullets.length > 0) {
             this.bullets.forEach((bullet) => {
-                // if (bullet.age > this.maxBulletAge)
-                //     bullet.dispose();
-                bullet.mesh.rotation = getRotationVectorFromTarget(new BABYLON.Vector3(0, 1, 0), bullet.mesh, bullet.target);
-                bullet.mesh.movePOV(bullet.speed, 0, 0);
-                bullet.x = bullet.mesh.position.x;
-                bullet.y = bullet.mesh.position.y;
-                bullet.z = bullet.mesh.position.z;
-                // if (bullet.mesh.intersectsMesh(bullet.target.mesh)) { // Werkt analoog als bij Axies niet...
-                if (BABYLON.Vector3.Distance(bullet.mesh.position, bullet.target.mesh.position) <= 0.5) {
-                    bullet.target.inflictDamage(bullet.damage);
-                    if (bullet.target.hp <= 0) {
-                        var target = bullet.target;
-                        if (target instanceof Axie) {
-                            targets_to_dispose.push(target);
-                        }
-                    }
-                    this.state.bullets.delete(bullet.id);
-                    bullet.dispose();
+                if (targets_to_dispose.indexOf(bullet.target as Axie) != -1) {
+                    bullets_to_dispose.push(bullet);
                 } else {
-                    // bullet.age++;
-                    remaining_bullets.push(bullet);
+                    bullet.mesh.rotation = getRotationVectorFromTarget(new BABYLON.Vector3(0, 1, 0), bullet.mesh, bullet.target);
+                    bullet.mesh.movePOV(bullet.speed, 0, 0);
+                    bullet.x = bullet.mesh.position.x;
+                    bullet.y = bullet.mesh.position.y;
+                    bullet.z = bullet.mesh.position.z;
+                    // if (bullet.mesh.intersectsMesh(bullet.target.mesh)) { // Werkt analoog als bij Axies niet...
+                    if (BABYLON.Vector3.Distance(bullet.mesh.position, bullet.target.mesh.position) <= 0.2) {
+                        bullet.target.inflictDamage(bullet.damage);
+                        if (bullet.target.hp <= 0) {
+                            var target = bullet.target;
+                            if (target instanceof Axie) {
+                                targets_to_dispose.push(target);
+                            }
+                        }
+                        bullets_to_dispose.push(bullet);
+                    } else {
+                        remaining_bullets.push(bullet);
+                    }
                 }
             })
         }
@@ -234,7 +228,13 @@ export class MyRoom extends Room<RaiderRoomState> {
             target.dispose();
             this.state.players.get(this.playerIdByPlayerNumber.get(target.player_number)).axies.delete(target.id);
             this.axiesByAxieIdByPlayerNumber.get(target.player_number).delete(target.id);
-        })
+            this.play_field_grid[target.grid_value_i][target.grid_value_j] = null;
+        });
+
+        bullets_to_dispose.forEach(bullet => {
+            this.state.bullets.delete(bullet.id);
+            bullet.dispose();
+        });
 
         this.bullets = remaining_bullets;
 
